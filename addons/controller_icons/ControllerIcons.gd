@@ -64,6 +64,12 @@ var _builtin_keys := [
 	"input/ui_up",
 ]
 
+func set_to_mouse_mode():
+	_set_last_input_type(InputType.KEYBOARD_MOUSE)
+	
+func set_to_controller_mode():
+	_set_last_input_type(InputType.CONTROLLER)
+
 func _set_last_input_type(__last_input_type):
 	_last_input_type = __last_input_type
 	emit_signal("input_type_changed", _last_input_type)
@@ -97,42 +103,11 @@ func _parse_input_actions():
 			_add_custom_input_action(input_action, data)
 
 func _ready():
-	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	_settings = load("res://addons/controller_icons/settings.tres")
 	if not _settings:
 		_settings = ControllerSettings.new()
 	if _settings.custom_mapper:
 		Mapper = _settings.custom_mapper.new()
-	# Wait a frame to give a chance for the app to initialize
-	await get_tree().process_frame
-	# Set input type to what's likely being used currently
-	if Input.get_connected_joypads().is_empty():
-		_set_last_input_type(InputType.KEYBOARD_MOUSE)
-	else:
-		_set_last_input_type(InputType.CONTROLLER)
-
-func _on_joy_connection_changed(device, connected):
-	if device == 0:
-		if connected:
-			_set_last_input_type(InputType.CONTROLLER)
-		else:
-			_set_last_input_type(InputType.KEYBOARD_MOUSE)
-
-func _input(event: InputEvent):
-	var input_type = _last_input_type
-	match event.get_class():
-		"InputEventKey", "InputEventMouseButton":
-			input_type = InputType.KEYBOARD_MOUSE
-		"InputEventMouseMotion":
-			if _settings.allow_mouse_remap and event.velocity.length() > _settings.mouse_min_movement:
-				input_type = InputType.KEYBOARD_MOUSE
-		"InputEventJoypadButton":
-			input_type = InputType.CONTROLLER
-		"InputEventJoypadMotion":
-			if abs(event.axis_value) > _settings.joypad_deadzone:
-				input_type = InputType.CONTROLLER
-	if input_type != _last_input_type:
-		_set_last_input_type(input_type)
 
 func _add_custom_input_action(input_action: String, data: Dictionary):
 	_custom_input_actions[input_action] = data["events"]
